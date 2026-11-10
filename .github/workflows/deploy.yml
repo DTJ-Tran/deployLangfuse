@@ -28,6 +28,7 @@ jobs:
           host: ${{ secrets.GCP_VM_HOST }}
           username: davestran
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          command_timeout: 10m
           script: |
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export NEXTAUTH_URL="http://${{ secrets.GCP_VM_HOST }}:3000"

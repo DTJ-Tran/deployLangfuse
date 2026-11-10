@@ -1,0 +1,31 @@
+name: Build and Deploy Langfuse to GCP VM
+
+on:
+  push:
+    branches:[test]
+jobs:
+  build-and-deploy:
+    runs-on : ubuntu-latest
+
+    enviroment: langfuse_dep
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Deployment Script
+
+        env:
+          DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME}}
+          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN}}
+          GCE_INSTANCE: ${{ secrets.GCE_INSTANCE}}
+          GCE_INSTANCE_ZONE: ${{ secrets.GCE_INSTANCE_ZONE}}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID}}
+          GCP_VM_HOST: ${{ secrets.GCP_VM_HOST}}
+        
+        run: |
+          echo "Starting to mock deployment to langfuse_dep..."
+          echo "DOCKER_USERNAME: $DOCKER_USERNAME"
+          echo "GCE_INSTANCE: $GCE_INSTANCE"
+          echo "GCE_INSTANCE_ZONE: $GCE_INSTANCE_ZONE"
+          echo "GCP_PROJECT_ID: $GCP_PROJECT_ID"
+          echo "GCP_VM_HOST: $GCP_VM_HOST"

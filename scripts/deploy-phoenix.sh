@@ -12,8 +12,17 @@ echo "    Region  : $REGION"
 echo "    Project : $PROJECT"
 echo "    Image   : $PHOENIX_IMAGE"
 
-# Use ^|^ as delimiter so the PostgreSQL URL (which contains = and @) doesn't
-# confuse the comma-delimited --set-env-vars parser.
+# Write env vars to a YAML file so values with special chars (@ : = |) are safe.
+cat > /tmp/phoenix-env.yaml << EOF
+PHOENIX_PORT: "6006"
+PHOENIX_GRPC_PORT: "4317"
+PHOENIX_ENABLE_AUTH: "true"
+PHOENIX_USE_SECURE_COOKIES: "true"
+PHOENIX_TELEMETRY_ENABLED: "false"
+PHOENIX_SECRET: "${PHOENIX_SECRET}"
+PHOENIX_SQL_DATABASE_URL: "${PHOENIX_SQL_DATABASE_URL}"
+EOF
+
 gcloud run deploy "$SERVICE_NAME" \
   --image="$PHOENIX_IMAGE" \
   --region="$REGION" \
@@ -26,7 +35,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --cpu=1 \
   --cpu-boost \
   --timeout=300 \
-  --set-env-vars="^|^PHOENIX_PORT=6006|PHOENIX_GRPC_PORT=4317|PHOENIX_ENABLE_AUTH=true|PHOENIX_USE_SECURE_COOKIES=true|PHOENIX_TELEMETRY_ENABLED=false|PHOENIX_SECRET=${PHOENIX_SECRET}|PHOENIX_SQL_DATABASE_URL=${PHOENIX_SQL_DATABASE_URL}"
+  --env-vars-file=/tmp/phoenix-env.yaml
 
 echo ">>> Done. Service URL:"
 gcloud run services describe "$SERVICE_NAME" \

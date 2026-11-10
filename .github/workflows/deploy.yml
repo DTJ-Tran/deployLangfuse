@@ -13,17 +13,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.GCP_VM_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy Langfuse (ClickHouse + Web + Worker)
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.GCP_VM_HOST }}
-          username: davestran
-          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          command_timeout: 10m
-          script: |
+        timeout-minutes: 15
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no davestran@${{ secrets.GCP_VM_HOST }} << 'ENDSSH'
             mkdir -p ~/scripts
             curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/deploy-langfuse.sh -o ~/scripts/deploy-langfuse.sh
             chmod +x ~/scripts/deploy-langfuse.sh
+
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export NEXTAUTH_URL="http://${{ secrets.GCP_VM_HOST }}:3000"
             export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
@@ -38,4 +42,6 @@ jobs:
             export LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT="${{ vars.LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT }}"
             export LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID="${{ vars.LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID }}"
             export LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY="${{ secrets.LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY }}"
+
             bash ~/scripts/deploy-langfuse.sh
+          ENDSSH

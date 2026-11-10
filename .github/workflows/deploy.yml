@@ -2,7 +2,7 @@ name: Build and Deploy Langfuse to GCP VM
 
 on:
   push:
-    branches:[test] 
+    branches: [test] 
 jobs:
   build-and-deploy:
     runs-on : ubuntu-latest

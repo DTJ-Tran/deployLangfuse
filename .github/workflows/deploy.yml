@@ -22,7 +22,7 @@ jobs:
       - name: Deploy Langfuse (ClickHouse + Web + Worker)
         timeout-minutes: 15
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no davestran@${{ secrets.GCP_VM_HOST }} << 'ENDSSH'
+          ssh -T -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no davestran@${{ secrets.GCP_VM_HOST }} << 'ENDSSH'
             mkdir -p ~/scripts
             curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/deploy-langfuse.sh -o ~/scripts/deploy-langfuse.sh
             chmod +x ~/scripts/deploy-langfuse.sh

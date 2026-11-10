@@ -24,7 +24,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances=1 \
   --memory=1Gi \
   --cpu=1 \
-  --startup-cpu-boost \
+  --cpu-boost \
   --timeout=300 \
   --set-env-vars="^|^PHOENIX_PORT=6006|PHOENIX_GRPC_PORT=4317|PHOENIX_ENABLE_AUTH=true|PHOENIX_USE_SECURE_COOKIES=true|PHOENIX_TELEMETRY_ENABLED=false|PHOENIX_SECRET=${PHOENIX_SECRET}|PHOENIX_SQL_DATABASE_URL=${PHOENIX_SQL_DATABASE_URL}"
 

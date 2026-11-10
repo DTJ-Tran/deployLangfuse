@@ -12,22 +12,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Copy DuckDNS script to VM
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.GCP_VM_HOST }}
-          username: davestran
-          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          source: scripts/deploy-duckdns.sh
-          target: ~/
-
       - name: Deploy DuckDNS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.GCP_VM_HOST }}
           username: davestran
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          command_timeout: 5m
           script: |
+            mkdir -p ~/scripts
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/deploy-duckdns.sh -o ~/scripts/deploy-duckdns.sh
+            chmod +x ~/scripts/deploy-duckdns.sh
             export DUCKDNS_SUBDOMAIN="${{ vars.DUCKDNS_SUBDOMAIN }}"
             export DUCKDNS_TOKEN="${{ secrets.DUCKDNS_TOKEN }}"
             bash ~/scripts/deploy-duckdns.sh

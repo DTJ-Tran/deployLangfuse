@@ -13,15 +13,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Copy deploy script to VM
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.GCP_VM_HOST }}
-          username: davestran
-          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
-          source: scripts/deploy-langfuse.sh
-          target: ~/
-
       - name: Deploy Langfuse (ClickHouse + Web + Worker)
         uses: appleboy/ssh-action@v1
         with:
@@ -30,6 +21,9 @@ jobs:
           key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           command_timeout: 10m
           script: |
+            mkdir -p ~/scripts
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/deploy-langfuse.sh -o ~/scripts/deploy-langfuse.sh
+            chmod +x ~/scripts/deploy-langfuse.sh
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export NEXTAUTH_URL="http://${{ secrets.GCP_VM_HOST }}:3000"
             export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"

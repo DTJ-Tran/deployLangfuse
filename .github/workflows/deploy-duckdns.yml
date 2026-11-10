@@ -1,0 +1,33 @@
+name: Deploy DuckDNS to GCP VM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-duckdns:
+    runs-on: ubuntu-latest
+    environment: langfuse_dep
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy DuckDNS script to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GCP_VM_HOST }}
+          username: davestran
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          source: scripts/deploy-duckdns.sh
+          target: ~/
+
+      - name: Deploy DuckDNS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.GCP_VM_HOST }}
+          username: davestran
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            export DUCKDNS_SUBDOMAIN="${{ vars.DUCKDNS_SUBDOMAIN }}"
+            export DUCKDNS_TOKEN="${{ secrets.DUCKDNS_TOKEN }}"
+            bash ~/scripts/deploy-duckdns.sh

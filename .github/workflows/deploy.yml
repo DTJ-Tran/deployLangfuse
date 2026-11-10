@@ -1,31 +1,46 @@
-name: Build and Deploy Langfuse to GCP VM
+name: Deploy Langfuse to GCP VM
 
 on:
   push:
-    branches: [test] 
-jobs:
-  build-and-deploy:
-    runs-on : ubuntu-latest
+    branches: [main]
 
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
     environment: langfuse_dep
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Deployment Script
+      - name: Copy deploy script to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GCP_VM_HOST }}
+          username: davestran
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          source: scripts/deploy-langfuse.sh
+          target: ~/
 
-        env:
-          DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME}}
-          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN}}
-          GCE_INSTANCE: ${{ secrets.GCE_INSTANCE}}
-          GCE_INSTANCE_ZONE: ${{ secrets.GCE_INSTANCE_ZONE}}
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID}}
-          GCP_VM_HOST: ${{ secrets.GCP_VM_HOST}}
-        
-        run: |
-          echo "Starting to mock deployment to langfuse_dep..."
-          echo "DOCKER_USERNAME: $DOCKER_USERNAME"
-          echo "GCE_INSTANCE: $GCE_INSTANCE"
-          echo "GCE_INSTANCE_ZONE: $GCE_INSTANCE_ZONE"
-          echo "GCP_PROJECT_ID: $GCP_PROJECT_ID"
-          echo "GCP_VM_HOST: $GCP_VM_HOST"
+      - name: Deploy Langfuse (ClickHouse + Web + Worker)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.GCP_VM_HOST }}
+          username: davestran
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          script: |
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            export NEXTAUTH_URL="http://${{ secrets.GCP_VM_HOST }}:3000"
+            export NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
+            export SALT="${{ secrets.SALT }}"
+            export ENCRYPTION_KEY="${{ secrets.ENCRYPTION_KEY }}"
+            export REDIS_HOST="${{ vars.UPSTASH_REDIS_HOST }}"
+            export REDIS_PORT="${{ vars.REDIS_PORT }}"
+            export REDIS_AUTH="${{ secrets.UPSTASH_REDIS_REST_TOKEN }}"
+            export CLICKHOUSE_USER="${{ vars.CLICKHOUSE_USER }}"
+            export CLICKHOUSE_PASSWORD="${{ secrets.CLICKHOUSE_PASSWORD }}"
+            export LANGFUSE_S3_EVENT_UPLOAD_BUCKET="${{ vars.LANGFUSE_S3_EVENT_UPLOAD_BUCKET }}"
+            export LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT="${{ vars.LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT }}"
+            export LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID="${{ vars.LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID }}"
+            export LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY="${{ secrets.LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY }}"
+            bash ~/scripts/deploy-langfuse.sh

@@ -1,8 +1,7 @@
 name: Deploy Langfuse to GCP VM
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -38,7 +37,7 @@ jobs:
           LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${{ vars.LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID }}
         run: |
           cat > /tmp/remote-deploy.sh << EOF
-          set -euo pipefail
+          set -euxo pipefail
           mkdir -p ~/scripts
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/deploy-langfuse.sh -o ~/scripts/deploy-langfuse.sh
           chmod +x ~/scripts/deploy-langfuse.sh
@@ -58,4 +57,4 @@ jobs:
           export LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY="$LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY"
           bash ~/scripts/deploy-langfuse.sh
           EOF
-          ssh -T -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no davestran@$VM_HOST 'bash -s' < /tmp/remote-deploy.sh
+          ssh -T -v -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no davestran@$VM_HOST 'bash -s' < /tmp/remote-deploy.sh

@@ -63,5 +63,4 @@ jobs:
           PHOENIX_SERVICE_NAME: ${{ vars.PHOENIX_SERVICE_NAME }}
           PHOENIX_SECRET: ${{ secrets.PHOENIX_SECRET }}
           PHOENIX_SQL_DATABASE_URL: ${{ secrets.PHOENIX_SQL_DATABASE_URL }}
-          PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: ${{ secrets.PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD }}
         run: bash scripts/deploy-phoenix.sh

@@ -22,6 +22,8 @@ PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD="${PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD
 # Write env vars to a YAML file so values with special chars (@ : = |) are safe.
 # Neon requires SSL — the full URL with ?sslmode=require covers this;
 # individual PHOENIX_POSTGRES_* vars have no SSL field.
+# PHOENIX_MIGRATE_INDEX_CONCURRENTLY: migrations use CREATE INDEX CONCURRENTLY
+# so no table locks during the migration job.
 cat > /tmp/phoenix-env.yaml << EOF
 PHOENIX_PORT: "6006"
 PHOENIX_GRPC_PORT: "4317"
@@ -31,8 +33,42 @@ PHOENIX_TELEMETRY_ENABLED: "false"
 PHOENIX_SECRET: "${PHOENIX_SECRET}"
 PHOENIX_SQL_DATABASE_URL: "${PHOENIX_SQL_DATABASE_URL}"
 PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: "${PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD}"
+PHOENIX_MIGRATE_INDEX_CONCURRENTLY: "true"
 EOF
 
+# --- Step 1: Run DB migrations as a Cloud Run Job ---
+# This separates migration from server startup so the Cloud Run startup probe
+# never times out waiting for Alembic to finish.
+echo ">>> Running DB migrations (Cloud Run Job)"
+gcloud run jobs create phoenix-migrate \
+  --image="$PHOENIX_IMAGE" \
+  --region="$REGION" \
+  --project="$PROJECT" \
+  --command="phoenix" \
+  --args="db,migrate" \
+  --env-vars-file=/tmp/phoenix-env.yaml \
+  --max-retries=1 \
+  --task-timeout=600 \
+  2>/dev/null \
+|| gcloud run jobs update phoenix-migrate \
+  --image="$PHOENIX_IMAGE" \
+  --region="$REGION" \
+  --project="$PROJECT" \
+  --command="phoenix" \
+  --args="db,migrate" \
+  --env-vars-file=/tmp/phoenix-env.yaml \
+  --max-retries=1 \
+  --task-timeout=600
+
+echo ">>> Executing migration job (waiting for completion)..."
+gcloud run jobs execute phoenix-migrate \
+  --region="$REGION" \
+  --project="$PROJECT" \
+  --wait
+
+echo ">>> Migrations complete."
+
+# --- Step 2: Deploy the service (DB already migrated) ---
 gcloud run deploy "$SERVICE_NAME" \
   --image="$PHOENIX_IMAGE" \
   --region="$REGION" \

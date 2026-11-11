@@ -14,9 +14,14 @@ echo "    Image   : $PHOENIX_IMAGE"
 
 # Validate required secrets are present before attempting deploy.
 : "${PHOENIX_SECRET:?PHOENIX_SECRET is not set — add it to GitHub Secrets}"
-# : "${PHOENIX_SQL_DATABASE_URL:?PHOENIX_SQL_DATABASE_URL is not set — add it to GitHub Secrets}"
-# PHOENIX_SQL_DATABASE_URL: "${PHOENIX_SQL_DATABASE_URL}"
+: "${PHOENIX_SQL_DATABASE_URL:?PHOENIX_SQL_DATABASE_URL is not set — add it to GitHub Secrets}"
+
+# Optional — if unset, Phoenix generates a random password on first boot.
+PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD="${PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD:-}"
+
 # Write env vars to a YAML file so values with special chars (@ : = |) are safe.
+# Neon requires SSL — the full URL with ?sslmode=require covers this;
+# individual PHOENIX_POSTGRES_* vars have no SSL field.
 cat > /tmp/phoenix-env.yaml << EOF
 PHOENIX_PORT: "6006"
 PHOENIX_GRPC_PORT: "4317"
@@ -24,12 +29,8 @@ PHOENIX_ENABLE_AUTH: "true"
 PHOENIX_USE_SECURE_COOKIES: "true"
 PHOENIX_TELEMETRY_ENABLED: "false"
 PHOENIX_SECRET: "${PHOENIX_SECRET}"
-PHOENIX_POSTGRES_HOST: "${PHOENIX_POSTGRES_HOST}"
-PHOENIX_POSTGRES_PORT: "${PHOENIX_POSTGRES_PORT}"
-PHOENIX_POSTGRES_USER: "${PHOENIX_POSTGRES_USER}"
-PHOENIX_POSTGRES_PASSWORD: "${PHOENIX_POSTGRES_PASSWORD}"
-PHOENIX_POSTGRES_DB: "${PHOENIX_POSTGRES_DB}"
-
+PHOENIX_SQL_DATABASE_URL: "${PHOENIX_SQL_DATABASE_URL}"
+PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: "${PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD}"
 EOF
 
 gcloud run deploy "$SERVICE_NAME" \

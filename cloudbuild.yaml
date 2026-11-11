@@ -1,0 +1,24 @@
+steps:
+  - name: gcr.io/kaniko-project/executor:latest
+    args:
+      - --dockerfile=docker/phoenix/Dockerfile
+      - --context=.
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/phoenix/phoenix:$TAG_NAME
+      - --destination=us-central1-docker.pkg.dev/$PROJECT_ID/phoenix/phoenix:latest
+      - --cache=true
+      - --cache-repo=us-central1-docker.pkg.dev/$PROJECT_ID/phoenix/cache
+      - --custom-platform=linux/amd64
+      - --verbosity=info
+
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/phoenix/phoenix:$TAG_NAME
+  - us-central1-docker.pkg.dev/$PROJECT_ID/phoenix/phoenix:latest
+
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+  requestedVerifyOption: VERIFIED
+
+substitutions:
+  _REGION: us-central1
+  TAG_NAME: latest

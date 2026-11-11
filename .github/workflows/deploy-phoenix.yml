@@ -4,9 +4,44 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
+    name: Build image (Modal + Kaniko)
     runs-on: ubuntu-latest
     environment: langfuse_dep
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Modal
+        run: pip install modal
+
+      - name: Build & push Phoenix image
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          modal token set \
+            --token-id ${{ env.MODAL_TOKEN_ID }} \
+            --token-secret ${{ env.MODAL_TOKEN_SECRET }}
+          modal run scripts/build-phoenix-image.py \
+            --registry us-central1-docker.pkg.dev \
+            --image-name ${{ secrets.GCP_PROJECT_ID }}/phoenix/phoenix \
+            --tag latest \
+            --platform linux/amd64 \
+            --push
+
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    environment: langfuse_dep
+    needs: build
 
     steps:
       - name: Checkout code
@@ -27,5 +62,9 @@ jobs:
           GCP_REGION: ${{ vars.GCP_REGION }}
           PHOENIX_SERVICE_NAME: ${{ vars.PHOENIX_SERVICE_NAME }}
           PHOENIX_SECRET: ${{ secrets.PHOENIX_SECRET }}
-          PHOENIX_SQL_DATABASE_URL: ${{ secrets.PHOENIX_SQL_DATABASE_URL }}
+          PHOENIX_POSTGRES_HOST: ${{ secrets.PHOENIX_POSTGRES_HOST }}
+          PHOENIX_POSTGRES_PORT: ${{ vars.PHOENIX_POSTGRES_PORT }}
+          PHOENIX_POSTGRES_USER: ${{ secrets.PHOENIX_POSTGRES_USER }}
+          PHOENIX_POSTGRES_PASSWORD: ${{ secrets.PHOENIX_POSTGRES_PASSWORD }}
+          PHOENIX_POSTGRES_DB: ${{ vars.PHOENIX_POSTGRES_DB }}
         run: bash scripts/deploy-phoenix.sh

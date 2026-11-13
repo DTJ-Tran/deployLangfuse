@@ -2,3 +2,5 @@
 .claude/
 .vscode/
 secrets/
+langfuse/
+.DS_Store

@@ -2,9 +2,9 @@
 set -euo pipefail
 
 CONTAINER="duckdns"
-IMAGE="lscr.io/linuxserver/duckdns:latest"
+IMAGE="${DUCKDNS_IMAGE:?DUCKDNS_IMAGE must be set to the Artifact Registry path, e.g. us-central1-docker.pkg.dev/<proj>/mirror/duckdns:<tag>}"
 
-echo ">>> Pulling DuckDNS image"
+echo ">>> Pulling DuckDNS image: $IMAGE"
 docker pull "$IMAGE"
 
 echo ">>> Stopping existing DuckDNS container (if any)"

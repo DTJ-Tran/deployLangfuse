@@ -20,14 +20,23 @@ jobs:
 
       - name: Deploy DuckDNS
         timeout-minutes: 5
+        env:
+          DUCKDNS_IMAGE: ${{ vars.DUCKDNS_IMAGE }}
         run: |
-          ssh -T -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no davestran@${{ secrets.GCP_VM_HOST }} << 'ENDSSH'
+          ssh -T -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no davestran@${{ secrets.GCP_VM_HOST }} \
+              DUCKDNS_IMAGE="$DUCKDNS_IMAGE" \
+              DUCKDNS_SUBDOMAIN="${{ vars.DUCKDNS_SUBDOMAIN }}" \
+              DUCKDNS_TOKEN="${{ secrets.DUCKDNS_TOKEN }}" \
+              GH_REPO="${{ github.repository }}" \
+              bash -s << 'ENDSSH'
+            set -euo pipefail
             mkdir -p ~/scripts
-            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/deploy-duckdns.sh -o ~/scripts/deploy-duckdns.sh
+            curl -fsSL "https://raw.githubusercontent.com/${GH_REPO}/main/scripts/deploy-duckdns.sh" -o ~/scripts/deploy-duckdns.sh
             chmod +x ~/scripts/deploy-duckdns.sh
 
-            export DUCKDNS_SUBDOMAIN="${{ vars.DUCKDNS_SUBDOMAIN }}"
-            export DUCKDNS_TOKEN="${{ secrets.DUCKDNS_TOKEN }}"
+            # Authenticate Docker to Artifact Registry using the VM's attached
+            # service account (requires roles/artifactregistry.reader).
+            gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
             bash ~/scripts/deploy-duckdns.sh
           ENDSSH

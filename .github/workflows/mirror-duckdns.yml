@@ -1,0 +1,86 @@
+name: Mirror DuckDNS image to Artifact Registry
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: "Source tag on lscr.io/linuxserver/duckdns"
+        required: true
+        default: "latest"
+      dest_tag:
+        description: "Destination tag in Artifact Registry (e.g. 2026-11-13)"
+        required: true
+
+jobs:
+  mirror:
+    name: Pull → retag → push to AR
+    runs-on: ubuntu-latest
+    environment: langfuse_dep
+
+    env:
+      AR_REGION: us-central1
+      AR_REPO: phoenix
+      AR_IMAGE: duckdns
+      SRC_IMAGE: lscr.io/linuxserver/duckdns
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.AR_REGION }}-docker.pkg.dev --quiet
+
+      - name: Ensure AR repo exists
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          if ! gcloud artifacts repositories describe "$AR_REPO" \
+                --project "$GCP_PROJECT_ID" \
+                --location "$AR_REGION" >/dev/null 2>&1; then
+            gcloud artifacts repositories create "$AR_REPO" \
+              --project "$GCP_PROJECT_ID" \
+              --location "$AR_REGION" \
+              --repository-format=docker \
+              --description="Mirrored third-party images"
+          fi
+
+      - name: Pull source image
+        run: docker pull "$SRC_IMAGE:${{ github.event.inputs.source_tag }}"
+
+      - name: Resolve source digest
+        id: digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+            "$SRC_IMAGE:${{ github.event.inputs.source_tag }}")
+          echo "source_digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Pinned source: $DIGEST"
+
+      - name: Retag and push
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          DEST="${AR_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${AR_IMAGE}:${{ github.event.inputs.dest_tag }}"
+          DEST_LATEST="${AR_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPO}/${AR_IMAGE}:latest"
+          docker tag "$SRC_IMAGE:${{ github.event.inputs.source_tag }}" "$DEST"
+          docker tag "$SRC_IMAGE:${{ github.event.inputs.source_tag }}" "$DEST_LATEST"
+          docker push "$DEST"
+          docker push "$DEST_LATEST"
+          echo "Mirrored to: $DEST"
+          echo "Also tagged: $DEST_LATEST"
+
+      - name: Summary
+        run: |
+          {
+            echo "### DuckDNS mirror pushed"
+            echo ""
+            echo "- Source: \`$SRC_IMAGE:${{ github.event.inputs.source_tag }}\`"
+            echo "- Source digest: \`${{ steps.digest.outputs.source_digest }}\`"
+            echo "- Destination tag: \`${{ github.event.inputs.dest_tag }}\`"
+            echo ""
+            echo "Update \`DUCKDNS_IMAGE\` repo var to pin the new tag."
+          } >> "$GITHUB_STEP_SUMMARY"

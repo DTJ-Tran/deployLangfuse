@@ -28,7 +28,7 @@ jobs:
               bash -s << 'ENDSSH'
             set -euo pipefail
             mkdir -p ~/scripts
-            curl -fsSL "https://raw.githubusercontent.com/${GH_REPO}/main/scripts/deploy-duckdns.sh" -o ~/scripts/deploy-duckdns.sh
+            curl -fsSL -H 'Cache-Control: no-cache' "https://raw.githubusercontent.com/${GH_REPO}/main/scripts/deploy-duckdns.sh?nocache=$(date +%s)" -o ~/scripts/deploy-duckdns.sh
             chmod +x ~/scripts/deploy-duckdns.sh
             bash ~/scripts/deploy-duckdns.sh
           ENDSSH
